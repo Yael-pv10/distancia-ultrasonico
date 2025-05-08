@@ -2,49 +2,161 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Distancia desde ESP32</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monitor de Distancia - Ultrasonido ESP32</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #111;
-      color: #0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1c1c1c, #2a2a2a);
+      color: white;
     }
-    h1 {
-      font-size: 2em;
+
+    header {
+      background-color: #111;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
     }
-    #distancia {
-      font-size: 4em;
+
+    .container {
+      padding: 30px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .card {
+      background: #222;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .distance-value {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00ffe7;
+      text-align: center;
+    }
+
+    .explanation {
+      font-size: 1rem;
+      color: #ccc;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 300px !important;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #888;
+      padding: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>Distancia Ultrasonido:</h1>
-  <div id="distancia">Cargando...</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+  <header>
+    Monitor de Distancia - Sensor Ultrasonido ESP32
+  </header>
 
-    const firebaseConfig = {
-      databaseURL: "https://sensorultrasonicoesp32-default-rtdb.firebaseio.com"
+  <div class="container">
+    <div class="card">
+      <div class="distance-value" id="distance">--</div>
+      <div class="explanation">
+        Este valor representa la distancia medida por un sensor ultrasónico conectado a un ESP32 y enviado a Firebase en tiempo real.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Historial en Tiempo Real</h3>
+      <canvas id="distanceChart"></canvas>
+    </div>
+  </div>
+
+  <footer>
+    Desarrollado por Yael · Proyecto IoT ESP32 + Firebase + GitHub Pages
+  </footer>
+
+  <script>
+    // Configuración de Firebase
+    var firebaseConfig = {
+      apiKey: "AIzaSyD5-vCQ-rw8d9GUWVZTlMKwIq7vOFrqlIc",
+      authDomain: "sensorultrasonicoesp32.firebaseapp.com",
+      databaseURL: "https://sensorultrasonicoesp32-default-rtdb.firebaseio.com",
+      projectId: "sensorultrasonicoesp32",
+      storageBucket: "sensorultrasonicoesp32.appspot.com",
+      messagingSenderId: "1069206937115",
+      appId: "1:1069206937115:web:3b25f1dd79a60efb97a1d0"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const distanciaRef = ref(db, '/ultrasonico/distance');
+    const dbRef = firebase.database().ref("ultrasonico/distance");
+    const distanceDisplay = document.getElementById("distance");
 
-    const distanciaDiv = document.getElementById("distancia");
-
-    onValue(distanciaRef, (snapshot) => {
-      const valor = snapshot.val();
-      distanciaDiv.textContent = valor !== null ? `${valor} cm` : "Sin datos";
+    // Mostrar distancia en vivo
+    dbRef.on("value", (snapshot) => {
+      const value = snapshot.val();
+      if (value !== null) {
+        distanceDisplay.textContent = value + " cm";
+        updateChart(value);
+      } else {
+        distanceDisplay.textContent = "--";
+      }
     });
+
+    // Configuración del gráfico
+    const ctx = document.getElementById('distanceChart').getContext('2d');
+    const distanceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Distancia (cm)',
+          backgroundColor: 'rgba(0,255,231,0.1)',
+          borderColor: '#00ffe7',
+          data: [],
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            title: { display: true, text: 'Hora' }
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: 250,
+            title: { display: true, text: 'Distancia (cm)' }
+          }
+        }
+      }
+    });
+
+    function updateChart(value) {
+      const now = new Date().toLocaleTimeString();
+      const chartData = distanceChart.data;
+
+      chartData.labels.push(now);
+      chartData.datasets[0].data.push(value);
+
+      if (chartData.labels.length > 20) {
+        chartData.labels.shift();
+        chartData.datasets[0].data.shift();
+      }
+
+      distanceChart.update();
+    }
   </script>
 </body>
 </html>
