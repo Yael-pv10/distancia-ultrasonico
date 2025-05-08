@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distancia desde ESP32</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 {
+      font-size: 2em;
+    }
+    #distancia {
+      font-size: 4em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Distancia Ultrasonido:</h1>
+  <div id="distancia">Cargando...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = {
+      databaseURL: "https://sensorultrasonicoesp32-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const distanciaRef = ref(db, '/ultrasonico/distance');
+
+    const distanciaDiv = document.getElementById("distancia");
+
+    onValue(distanciaRef, (snapshot) => {
+      const valor = snapshot.val();
+      distanciaDiv.textContent = valor !== null ? `${valor} cm` : "Sin datos";
+    });
+  </script>
+</body>
+</html>
